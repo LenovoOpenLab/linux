@@ -156,6 +156,7 @@ obj-$(CONFIG_SCSI_HISI_SAS) += hisi_sas/
 
 obj-y += sd_index.o
 obj-y += sd_psdn.o
+obj-y += sd_phy.o
 
 # This goes last, so that "real" scsi devices probe earlier
 obj-$(CONFIG_SCSI_DEBUG)	+= scsi_debug.o
