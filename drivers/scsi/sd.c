@@ -70,6 +70,7 @@
 #include "scsi_priv.h"
 #include "scsi_logging.h"
 #include "sd_index.h"
+#include "sd_uuid.h"
 
 MODULE_AUTHOR("Eric Youngdale");
 MODULE_DESCRIPTION("SCSI disk (sd) driver");
@@ -3298,6 +3299,7 @@ static int __init init_sd(void)
 	int majors = 0, i, err;
 
 	SCSI_LOG_HLQUEUE(3, printk("init_sd: sd driver entry point\n"));
+	cdn_efi_init();
 
 	for (i = 0; i < SD_MAJORS; i++) {
 		if (register_blkdev(sd_major(i), "sd") != 0)
