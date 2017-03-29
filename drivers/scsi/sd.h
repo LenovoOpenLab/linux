@@ -239,4 +239,10 @@ static inline void sd_dif_complete(struct scsi_cmnd *cmd, unsigned int a)
 
 #endif /* CONFIG_BLK_DEV_INTEGRITY */
 
+/* sd index policy */
+struct sd_index {
+	int (*alloc_index) (struct scsi_device *sd, int *index);
+	int (*free_index) (int index);
+};
+
 #endif /* _SCSI_DISK_H */

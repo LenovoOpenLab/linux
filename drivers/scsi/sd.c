@@ -123,6 +123,38 @@ static void sd_print_result(const struct scsi_disk *, const char *, int);
 static DEFINE_SPINLOCK(sd_index_lock);
 static DEFINE_IDA(sd_index_ida);
 
+static int alloc_index (struct scsi_device *sd, int *index);
+static int free_index (int index);
+
+/* sd index policy */
+struct sd_index sd_index = {
+	.alloc_index = alloc_index,
+	.free_index = free_index,
+};
+EXPORT_SYMBOL(sd_index);
+
+static int alloc_index (struct scsi_device *sd, int *index)
+{
+	int error;
+	do {
+		if (!(error = ida_pre_get(&sd_index_ida, GFP_KERNEL)))
+			return error;
+
+		spin_lock(&sd_index_lock);
+		error = ida_get_new(&sd_index_ida, index);
+		spin_unlock(&sd_index_lock);
+	} while (error == -EAGAIN);
+	return error;
+}
+
+static int free_index (int index)
+{
+	spin_lock(&sd_index_lock);
+	ida_remove(&sd_index_ida, index);
+	spin_unlock(&sd_index_lock);
+	return 0;
+}
+
 /* This semaphore is used to mediate the 0->1 reference get in the
  * face of object destruction (i.e. we can't allow a get on an
  * object after last put) */
@@ -3056,14 +3088,7 @@ static int sd_probe(struct device *dev)
 	if (!gd)
 		goto out_free;
 
-	do {
-		if (!ida_pre_get(&sd_index_ida, GFP_KERNEL))
-			goto out_put;
-
-		spin_lock(&sd_index_lock);
-		error = ida_get_new(&sd_index_ida, &index);
-		spin_unlock(&sd_index_lock);
-	} while (error == -EAGAIN);
+	error = sd_index.alloc_index(sdp, &index);
 
 	if (error) {
 		sdev_printk(KERN_WARNING, sdp, "sd_probe: memory exhausted.\n");
@@ -3109,9 +3134,7 @@ static int sd_probe(struct device *dev)
 	return 0;
 
  out_free_index:
-	spin_lock(&sd_index_lock);
-	ida_remove(&sd_index_ida, index);
-	spin_unlock(&sd_index_lock);
+	sd_index.free_index(index);
  out_put:
 	put_disk(gd);
  out_free:
@@ -3172,9 +3195,7 @@ static void scsi_disk_release(struct device *dev)
 	struct scsi_disk *sdkp = to_scsi_disk(dev);
 	struct gendisk *disk = sdkp->disk;
 	
-	spin_lock(&sd_index_lock);
-	ida_remove(&sd_index_ida, sdkp->index);
-	spin_unlock(&sd_index_lock);
+	sd_index.free_index(sdkp->index);
 
 	disk->private_data = NULL;
 	put_disk(disk);
