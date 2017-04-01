@@ -239,4 +239,17 @@ static inline void sd_dif_complete(struct scsi_cmnd *cmd, unsigned int a)
 
 #endif /* CONFIG_BLK_DEV_INTEGRITY */
 
+/* sd index policy */
+struct sd_index_policy {
+	const char *name;
+	/* allocate disk name index */
+	int (*alloc_index) (struct scsi_device *sdp, int *index);
+	/* free disk name index */
+	int (*free_index) (int index);
+	void *private_data;
+};
+
+int sd_index_policy_set(struct sd_index_policy *policy);
+int sd_index_policy_get(struct sd_index_policy **policy);
+
 #endif /* _SCSI_DISK_H */
